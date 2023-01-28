@@ -1,0 +1,49 @@
+name: Deployment
+on:
+  push:
+    branches:
+      - main
+      - dev
+env:
+  MONGODB_DB_NAME: test
+jobs:
+  test:
+    env:
+      MONGODB_CLUSTER_ADDRESS: cluster0.f1zmcuu.mongodb.net
+      MONGODB_USERNAME: sergeBasangovs
+      MONGODB_PASSWORD: campRaffalli187439
+      PORT: 8080
+    runs-on: ubuntu-latest
+    outputs:
+      npm-cache-dir: ${{ steps.npm-cache-dir.outputs.dir }}
+    steps:
+      - name: Get Code
+        uses: actions/checkout@v3
+      - name: Get npm cache directory
+        id: npm-cache-dir
+        run: echo "dir=$(npm config get cache)" >> ${GITHUB_OUTPUT}
+      - name: Cache Dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.npm-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      - name: Install Dependencies
+        run: npm ci
+      - name: Run Server
+        run: npm start & npx wait-on http://127.0.0.1:$PORT
+      - name: Run tests
+        run: npm run test
+      - name: Output information
+        run: echo "MONGODB_USERNAME: ${{ env.MONGODB_USERNAME }}"
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Output information
+        run: |
+          echo "MONGODB_USERNAME: ${{ env.MONGODB_USERNAME }}"
+          echo "MONGODB_DB_NAME: ${{ env.MONGODB_DB_NAME }}"
+
+
